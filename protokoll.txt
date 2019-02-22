@@ -1,0 +1,320 @@
+SiMo: Mathi
+Protokoll: Tobias
+
+Beginn: 18:20
+
+===
+Beschlussfähig
+===
+
+FSR Physik und FSR Mathe sind beschlussfähig. Vollversammlung ist auch beschlussfähig.
+
+
+===
+Simo nächste Woche
+===
+
+${chris}
+
+===
+Beschluss des Protokolls der letzten Sitzung
+===
+
+Jan liest das Protokoll vom 12.12.2018 vor.
+
+Es wird angemerkt, dass Rechtschreibfehler existieren.
+
+Konsensvorschlag: Das Protokoll vom 12.12.2018 wird unter redaktionellen Änderungen beschlossen.
+
+Konsens: Einstimmig angenommen.
+
+===
+QSM Physik
+===
+
+Nächste Woche am 12.01.2018 ist die Frist für die Anträge der QSM Vorschläge. Die Physik hat sich getroffen und hat einen Vorschlag ausgearbeitet.
+Siehe: https://pad.mathphys.stura.uni-heidelberg.de/p/QSM_Physik
+Kopie:
+
+
+-------------------------------------------------------------------------------------------
+
+QSM Anträge:
+
+    * Werkraum
+    * Tutorien
+    * HiWi
+    * AP-Druckkosten
+    * AP-Versuchsausstattung
+
+
+    Werkraum:
+        QSM-Vorschlag für die Studienfachschaft Physik
+      An die QSM-Kommission: nein
+Kurzbezeichnung: Physik - Werkraum
+Beschreibung:
+Der studentische Werkraum ist auf Initative von Masterstudierenden vor einigen Jahren
+eingerichtet worden und steht unter der Verantwortung von Prof. Schultz-Coulon. In diesem
+Werkraum stehen allen Studierenden der Physik in Heidelberg Arbeitsflächen, -materialien und
+Werkzeuge zur Verfügung um selbstständig (bzw. mit Unterstützung der Aufsichtspersonen)
+Projektideen umsetzen zu können. Damit können die Studierenden die wissenschaftliche Inhalte
+ihres Studiums praxisbezogen in ihren Projekten anwenden. Mit den Mitteln sollen
+Verbrauchsmaterialien und verschlissene Werkzeuge nachbeschafft werden, um den Betrieb des
+Werkraumes auch in Zukunft zu ermöglichen. Desweiteren sollen Peripheriegeräte zum Steuern von Raspberry Pi's angeschafft werden.
+
+Stufe:
+1
+Bewilligter Betrag für 2019:
+500,00
+Deckungsfähigkeit Mittel: ja
+Datum der Beschlussfassung:
+2019-01-15
+Bewirtschaftende Einrichtung:
+Fakultät für Physik und Astronomie
+Budgetverantwortliche*r:
+Studiendekan Selim Jochim
+Laufzeit:
+01.04.2019 bis 31.03.2020 (SS19 und WiSe 19/20)
+Studienfachschaft:
+Physik
+Studentischer Ansprechpartner:
+
+Tutorien:
+    PTP2:
+        QSM-Vorschlag für die Studienfachschaft Physik
+An die QSM-Kommission: nein
+Kurzbezeichnung:
+Physik - Tutorien PTP2
+Beschreibung:
+Tutorien: Ergänzend zu der Vorlesung Theoretische Physik II (PTP2) mit 8 CP werden
+Übungsgruppen angeboten, in denen die Inhalte der Vorlesung wiederholt und Übungsaufgaben
+besprochen werden. Die Vorlesung ist Teil des Pflichtbereichs im Bachelorstudiengang. Mit den
+Mitteln sollen etwa 14 Tutor*innen eingestellt werden.
+Stufe:
+1
+Bewilligter Betrag für 2018:
+35000,00
+Deckungsfähigkeit Mittel:
+ja
+Datum der Beschlussfassung:
+2019-01-15
+Bewirtschaftende Einrichtung:
+Fakultät für Physik und Astronomie
+Budgetverantwortliche*r:
+Studiendekan Selim Jochim
+Laufzeit:
+01.04.2019 bis 31.03.2020 (SS19 und WS19/20)
+Studienfachschaft:
+Physik
+
+    PTP4:
+        QSM-Vorschlag für die Studienfachschaft Physik
+An die QSM-Kommission: nein
+Kurzbezeichnung:
+Physik - Tutorien PTP4
+Beschreibung:
+Tutorien: Ergänzend zu der Vorlesung Theo (PTP4) mit 8 CP werden
+Übungsgruppen angeboten, in denen die Inhalte der Vorlesung wiederholt und Übungsaufgaben
+besprochen werden. Die Vorlesung ist Teil des Pflichtbereichs im Bachelorstudiengang. Mit den
+Mitteln soll etwa 8 Tutor*in eingestellt werden.
+Stufe:
+1
+Bewilligter Betrag für 2018:
+20000,00
+Deckungsfähigkeit Mittel:
+ja
+Datum der Beschlussfassung:
+2019-01-15
+Bewirtschaftende Einrichtung:
+Fakultät für Physik und Astronomie
+Budgetverantwortliche*r:
+Studiendekan derzeit Selim Jochim
+Laufzeit:
+01.04.2019 bis 31.03.2020 (SS19 und WS19/20)
+Studienfachschaft:
+Physik
+
+General Relativity:
+        QSM-Vorschlag für die Studienfachschaft Physik
+An die QSM-Kommission: nein
+Kurzbezeichnung:
+Physik - Tutorien General Relativity
+Beschreibung:
+Tutorien: Ergänzend zu der Vorlesung General Relativity (MKTP3) mit 8 CP werden
+Übungsgruppen angeboten, in denen die Inhalte der Vorlesung wiederholt und Übungsaufgaben
+besprochen werden. Die Vorlesung ist Teil des Wahlpflichtbereichs im Masterstudiengang. Mit den
+Mitteln soll etwa 1 Tutor*in eingestellt werden.
+Stufe:
+1
+Bewilligter Betrag für 2019:
+2500,00
+Deckungsfähigkeit Mittel:
+ja
+Datum der Beschlussfassung:
+2019-01-15
+Bewirtschaftende Einrichtung:
+Fakultät für Physik und Astronomie
+Budgetverantwortliche*r:
+Studiendekan Selim Jochim
+Laufzeit:
+01.04.2019 bis 31.03.2020 (SS19 und WS19/20)
+Studienfachschaft:
+Physik
+
+HiWi:
+        QSM-Vorschlag für die Studienfachschaft Physik
+An die QSM-Kommission: nein
+Kurzbezeichnung:
+Physik - HiWi zur Ausweitung des Informationsangebot zu Veranstaltungen an der Fakultät
+Beschreibung:
+Aus den Qualitätssicherungsmitteln soll eine wissenschaftliche Hilfskraft finanziert werden, welche den Lehrkörper dabei unterstützt, Informationen zu ihren Veranstaltungen online zur Verfügung zu stellen.
+Dabei soll darauf geachtet werden, dass dieses zusätzliche Informationsangebot möglichst übersichtlich, einheitlich und informativ in die bereits bestehende digitale Infrastruktur der Fakultät integriert wird.
+Diese lehr- und lernnahe Maßnahme erhöht die Qualität unseres Studiengangs, indem sie ausführlichere Informationsmöglichkeiten anbietet, wie sie etwa das Vorlesungsverzeichnis oder das Modulhandbuch bereitstellen. Sie stellt einen ersten Schritt hin zur weiteren Digitalisierung der Lehrveranstaltungen dar.
+
+Stufe:
+2
+Bewilligter Betrag für 2019:
+1000,00
+Deckungsfähigkeit Mittel:
+ja
+Datum der Beschlussfassung:
+2019-01-15
+Bewirtschaftende Einrichtung:
+Fakultät für Physik und Astronomie
+Budgetverantwortliche*r:
+Studiendekan Selim Jochim
+Laufzeit:
+01.04.2019 bis 31.03.2020 (SS19 und WS19/20)
+Studienfachschaft:
+Physik
+
+AP-Druckkosten:
+    QSM-Vorschlag für die Studienfachschaft Physik
+An die QSM-Kommission: nein
+Kurzbezeichnung:
+Physik - Anfängerpraktikum - Versuchsanleitungen
+Beschreibung:
+Die Physikalischen Anfängerpraktika (PAP 1 mit 6CP und PAP 2 mit 7CP) sind Pflichtmodule
+des Physikbachelors. Mit der selbstständigen Durchführung bekannter physikalischer
+Experimente im Labor und der Erstellung schriftlicher Auswertungen finden hier erste Schritte in
+Richtung wissenschaftlicher Praxis statt. Für die Durchführung der Versuche gibt es instruktive
+Versuchsanleitungen. Diese müssen neu gedruckt werden, damit die Versuche auch vom
+nächsten Jahrgang Studierender durchgeführt werden können, ohne auf eine unhandliche digitale Version zurückgreifen zu müssen.
+
+Stufe:
+2
+Bewilligter Betrag für 2019:
+3500,00
+Deckungsfähigkeit Mittel:
+ja
+Datum der Beschlussfassung:
+2019-01-15
+Bewirtschaftende Einrichtung:
+Fakultät für Physik und Astonomie
+Budgetverantwortliche*r:
+Studiendekan  Selim Jochim
+Laufzeit:
+01.04.2019 bis 31.03.2020 (SS19 und WS19/20)
+Studienfachschaft:
+Physik
+
+Versuchsausstattung Praktikum
+
+QSM-Vorschlag für die Studienfachschaft Physik
+An die QSM-Kommission: nein
+Physik
+Kurzbezeichnung:
+Physik - Anfängerpraktikum - Versuchsausstattung
+Beschreibung:
+Die Physikalischen Anfängerpraktika (PAP 1 mit 6CP und PAP 2 mit 7CP) sind Pflichtmodule
+des Physikbachelors. Mit der selbstständigen Durchführung bekannter physikalischer
+Experimente finden hier erste Schritte in Richtung wissenschaftlicher Praxis statt.
+Mit den Mitteln sollen essentielle Bestandteile von Versuchen ersetzt werden.
+Für die Optikversuche soll mit den Mitteln ein Satz alter Glühbirnen durch zeitgemäße und energiesparende LED-Lampen ersetzt werden.
+Stufe:
+2
+Bewilligter Betrag für 2018:
+1500€
+Deckungsfähigkeit Mittel:
+ja
+Datum der Beschlussfassung:
+2019-01-15
+Bewirtschaftende Einrichtung:
+Fakultät für Physik und Astronomie
+Budgetverantwortliche*r:
+Studiendekan Selim Jochim
+Laufzeit:
+01.04.2019 bis 31.03.2020 (SS19 und WS19/20)
+Studienfachschaft:
+Physik
+Studentischer Ansprechpartner:
+
+-------------------------------------------------------------------------------------------
+
+Anmerkungen:
+
+- GR Tutor ist potentiell nicht nötig, da dieses Jahr vielleicht ein Doktorant zur Verfügung steht -> raus lassen. Es gibt eine zweite Antragsfrist dafür.
+- Studiendekan überall als derzeitig amtierend eintragen
+- ${mathi} wird Ansprechpartner fürs QSM Referat
+
+Aktuelle Fassung fürs offizielle Protokoll im Pad (Link oben)
+
+Konsensvorschlag: Die QSM Vorschläge werden unter den obigen Änderungen eingereicht.
+Konsens: Einstimmig angenommen
+
+Es wird gebeten, das QSM Referat zu fragen, in welcher Höhe die QSM in den nächsten Jahren weiter existieren werden. Wenn das QSM Referat das nicht weiß, soll es das Rektorat fragen.
+${mathi} fragt nach.
+
+===
+Stura-Bericht
+===
+
+Es wird aus dem Stura berichtet. Siehe Protokoll vom Stura
+
+Besonderes:
+
+- am 5.02.2019 kommt der Rektor in den Stura
+- Neuer runder Tisch zu Sperrzeiten in der Altstat wird ins Leben gerufen (Studis sind aus diesen Diskussionen ausgeschlossen)
+- QSM Referat lässt erinnern, dass die im letzten Top genannte Deadline naht.
+- Urabstimmung fürs Semesterticket wurde diskutiert:
+  - eine oder zwei Abstimmungen?: Wochenend und Abendregelung und Semesterticket
+  - Zuerst wird die Urabstimmung abgewartet, dann weiter verhandelt. Daher liegen die Verhandlungen fürs Erste auf Eis.
+  - Stura muss nicht zwingend eine Urabstimmung machen
+- Umsatzsteuern bei Veranstaltungen der VS
+  - Derzeit die Tendenz im Stura: Die Fachschaften, die zu Umastzsteuern führen, zahlen diese Steuern selber.
+  - Bisher gab es kaum Umsatzsteuer in relevanter Höhe. Wurde daher zentral vom Stura bezahlt.
+- Heidelberger Club für Wirtschaft und Kultur will für ein Symposium 5500€ haben. Gab ne ewige Diskussion.
+- Anglistik hat eine Mitgliedschaft im Jugendherrbergsverband beschlossen ohne den Vorsitz zu fragen. Stura ist da schon Mitglied. Die 40€ müssen Menschen in der Anglistik privat bezahlen.
+- Bewirtungsrichtlinie: Interne Veranstaltungen dürfen nur mit 5% des Haushalts und biszu 500€ gefördert werden.
+  - FSWE fällt nicht darunter, Begründungen müssen aber gebracht werden.
+- In 2 Wochen ist Stura Shutdown (Kein Vorsitz und kein Finanzreferat)
+
+Henrik tritt in 3 Sitzungen aus dem Stura aus. Es wird nach NachfolgerInnen in der Mathematik gesucht.
+
+===
+Neues aus Studium und Lehre
+===
+
+Es wird aus der Sitzung über Geld für Tutoren berichtet.
+Es wird aus Berufungskomissionen berichtet.
+
+===
+Verschiedenes
+===
+
+Wirtschaftsplan für 2019. Ist noch nicht fertig, nächste Woche liegt er vor. Falls es Einwände und Ideen für den neuen Wirtschaftsplan gibt, möge man sich bei Jan melden.
+
+Garderobe Medifasching:
+- es wird erklärt was der Medifasching ist
+- Frage: machen / nicht machen
+- Max würde im Notfall die Organisation übernehmen, nächstes Jahr aber definitiv nicht mehr.
+- Geldfrage muss genau fixiert werden.
+- Fragen ob es eine vegetarische Alternative fürs Frühstück gibt
+- Wer helfen möchte, sende eine Mail an max@mathphys.stura.uni-heidelberg.de
+- 01.02.2019 (Freitag) ist der Termin. Ab 15 Uhr Aufbau.
+${fachschaft}
+
+Der AK Fest tagt am Montag, den 14.01.2019 ab 18:15 vmtl. in Seminarraum C
+${fachschaft} ist eingeladen.
+
+Ende: 19:16

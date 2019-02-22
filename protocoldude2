@@ -1,0 +1,819 @@
+#!/bin/ruby-2.3
+# encoding: utf-8
+
+# SPAM (schneller, praktischer, automatischer Mailer)
+# Looks for mail adresses in the given text file and sends mails to each
+# found adress with some surrounding lines of text. Works for internal
+# adresses as well as normal mail adresses. Format them like:
+# ${internal}          => internal@mathphys.stura.uni-heidelberg.de
+# ${external@some.com} => external@some.com
+# ${external@some.com Some Name} => external@some.com
+# ${Some Name external@some.com} => external@some.com
+#
+# Externals may have their names specified within the braces.
+# Internals name is derived from finger.
+#
+# Note: Please do not copy the file if you need this for your directory,
+# but instead softlink it (ln -s path/to/protocoldude) and create
+# a "config.rb" file.
+
+########################################################################
+# Default config. if you want to override it, please include a
+# "config.rb" file in the affected directory.
+########################################################################
+
+# define the address that will be selected by default if the users
+# choose "Reply" in their mail client
+$replyto="fachschaft@mathphys.stura.uni-heidelberg.de"
+
+# Define the subject if the mails being sent. Will try to add date and
+# matching TOP Title to subject
+$subject="Sitzung MathPhys"
+
+# define mail addresses that will be sent the whole protocol
+$mailall = []
+
+# debug mode. activate to disable actual check-in and mailing
+$debug = false
+
+# Mail text is defined almost at the bottom of the file and should be
+# suitable for most protocols
+
+########################################################################
+
+# Add some often used, non account addresses.
+# works for @mathphys.stura.uni-heidelberg.de addresses only
+# fakemail is used to match against, and name will be used to address
+# the person or mailing list
+$users = []
+
+$users << ["fachschaft", "liebe Fachschaft"]
+$users << ["flachschaft", "liebe Fachschaft"]
+$users << ["bernd", "liebe Fachschaft"]
+$users << ["fsinformatik", "liebe Fachschaft"]
+$users << ["fsphysik", "liebe Fachschaft"]
+$users << ["fsmathematik", "liebe Fachschaft"]
+$users << ["fsmathinf", "liebe Fachschaft"]
+
+$users << ["infostudkom", "liebes Mitglied der Studienkommission Informatik"]
+$users << ["tistudkom", "liebes Mitglied der Studkom TI"]
+$users << ["mathstudkom", "liebe MathStudKomLerInnen"]
+$users << ["mathestudkom", "liebe MathStudKomLerInnen"]
+$users << ["physstudkom", "liebe Mitglied der Studkom Physik"]
+$users << ["physikstudkom", "liebe Mitglied der Studkom Physik"]
+$users << ["studkomphysik", "liebe Mitglied der Studkom Physik"]
+$users << ["scstudkom", "liebe Mitglied der Studkom SciCom"]
+
+$users << ["mathfakrat", "liebes Mitglied des MatheInfo-Fakrats"]
+$users << ["fakratmathinf", "liebes Mitglied des MatheInfo-Fakrats"]
+$users << ["physfakrat", "liebes Mitglied des Physik-Fakrats"]
+$users << ["fakratphys", "liebes Mitglied des Physik-Fakrats"]
+$users << ["fakratphysik", "liebes Mitglied des Physik-Fakrats"]
+
+$users << ["akfest", "liebes Mitglied der AK-Fest Liste"]
+#$users << ["mathfakrat", "liebe Mathefakräte"]
+
+########################################################################
+# here be dragons ######################################################
+########################################################################
+
+if RUBY_VERSION[0] == "2"
+  require 'gtk3'
+else
+  require 'gtk2'
+end
+require 'monitor'
+require 'date'
+require 'pp'
+
+# load external config if available
+cfgfile = File.join(Dir.getwd, "config.rb")
+require cfgfile if File.exist?(cfgfile)
+
+puts "Hier gibt es nichts zu sehen. Schau in die froehlich aufpoppenden Fenster."
+puts
+puts
+
+$appname = "Protocol Dude"
+$mailsSentLine = ":Protocoldude: Mails versandt @ "
+$regexpAccount = Regexp.compile(/\$\{([a-z0-9]+?)\}/i)
+$regexpMailValid = Regexp.compile(/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i)
+$regexpExternAll = Regexp.compile(/\$\{(.*?@.*?)\}/i)
+$regexpExtractMail = Regexp.compile(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}/i)
+$regexpRemoveTOP = Regexp.compile(/^(?:\s*TOP\s*[0-9]+\s*:?\s*)+/i)
+
+$thisIsFachschaftsRechner = `hostname`.strip == "fsmath"
+
+
+########################################################################
+# Utility Sachen
+########################################################################
+
+class UTILS
+  # asks each repository system if it could handle the current
+  # directory and returns a working one or exists if none is found.
+  def findRepo
+    $availableRepos.each do |x|
+      rep = eval("#{x}.new")
+      log rep.backend
+      next unless rep.isCorrectRepo?
+      puts "Gefundenes Repository: #{rep.backend}"
+      return rep
+    end
+    log "Konnte kein gültiges Repository an dieser Stelle finden. Breche ab."
+    exit
+  end
+
+  # run a shell command and catch output into log window
+  # command: the command to run
+  # log: if you want to log the command and its output to the console
+  def exe(command, log = true)
+    log("> #{command}") if log
+    x = Thread.new do
+      log(`#{command} 2>&1`) if log
+      `#{command} 2>&1` unless log
+      Thread.current["exitcode"] = $?
+    end
+
+    while x.alive?
+      $gui.processEvents
+      sleep 0.1
+    end if $gui
+    x.join
+
+    log "Exitcode was: #{x['exitcode']}" if $debug
+
+    x['exitcode']
+  end
+
+  # Logs to console window (in GUI if available, otherwise to the
+  # terminal)
+  def log(text)
+    return if text.nil? || text.strip.empty?
+    unless $gui
+      puts text.strip
+      return
+    end
+
+    $gui.buf << text.strip + "\n"
+    Gtk.queue do
+      $gui.cons.buffer.text = $gui.buf
+    end
+  end
+
+  # finds users by looking up home directories and fingering them for
+  # their real name. Processing is done in background and cached.
+  # Should only be called once.
+  def fingerUsers
+    return unless @fingerUsersThread.nil?
+    @fingerUsersThread = Thread.new do
+      threads = []
+      log "Lade lokale Nutzerdaten"
+      accs=`ls -1 /home`.split("\n")
+      $gui.printProgress(0, accs.size) if $gui
+
+      accs.each_with_index do |a,i|
+        # Limit number of threads. Otherwise the GTK GUI will stall.
+        while threads.select { |x| x.alive? }.length > 10
+          Thread.pass
+          sleep 0.05
+        end
+
+        threads << Thread.new do
+          $gui.printProgress(i+1, accs.size) if $gui
+          n = `finger -mp #{a}  2> /dev/null | head -n 1`.gsub(/^.*?Name: /, "").strip
+          next if n.empty?
+          addUser(n, a)
+        end
+      end
+      threads.each { |x| x.join }
+      puts
+    end
+  end
+
+  # returns list of available user accounts
+  def getUsers
+    fingerUsers
+    @fingerUsersThread.join unless @fingerUsersThread.nil?
+    $users
+  end
+
+  # adds a user to the user list
+  def addUser(name, mail)
+    $users << [mail, name]
+  end
+end
+
+
+########################################################################
+# Repository-Stuff
+########################################################################
+
+$availableRepos ||= ['GIT', 'SVN']
+
+class SVN < UTILS
+  def backend
+    "SVN"
+  end
+
+  def isCorrectRepo?(path = ".")
+    exe("svn info '#{path}'", false) == 0
+  end
+
+  def getURL(path = ".")
+    `svn info | grep "^URL:"`.gsub("URL: ", "").strip
+  end
+
+  def update
+    log "Update SVN"
+    unless exe('svn update', true) == 0
+      log "=" * 25
+      log "Konnte SVN Update nicht durchführen."
+      log "Das musst Du irgendwie von Hand reparieren mit 'svn cleanup' oder so."
+      return false
+    end
+    true
+  end
+
+  def commit(file, msg)
+    x = 0
+    x = exe("svn add '#{file}' && svn commit -m '#{msg}' '#{file}'") unless $debug
+    x
+  end
+end
+
+class GIT < UTILS
+  def backend
+    "GIT (no auto push)"
+  end
+
+  def isCorrectRepo?(path = ".")
+    exe("git status '#{path}'", false) == 0
+  end
+
+  def getURL
+    path = `git rev-parse --show-prefix`
+    url = `./$(git rev-parse --show-cdup) && cat .git/config | grep "url = "`
+    url.gsub(/\s*url = /, "") + "/" + path
+  end
+
+  def update
+    log "GIT Pull"
+    unless exe('git pull') == 0
+      log "Konnte git pull nicht durchführen. You are doooomed!"
+      return false
+    end
+    true
+  end
+
+  def commit(file, msg)
+    x = 0
+    x = exe("git add '#{file}' && git commit -msg '#{msg}' '#{file}'") unless $debug
+    log("Der commit wurde ausgeführt. Führe ein 'git push' aus, sobald Du Internet hast.")
+    x
+  end
+end
+
+
+
+########################################################################
+# GUI-Stuff
+########################################################################
+
+class GUI < UTILS
+  attr_accessor :buf, :cons
+
+  def initialize
+      @buf = ""
+
+      hbox = Gtk::HBox.new false, 10
+      hbox.pack_start createHelp, false, false
+      hbox.pack_start createConsole, true
+
+      @win = createWindow
+      @win.add hbox
+      @win.show_all
+  end
+
+  # Prints the current progress to the console without advancing one line
+  # val: currently processed item
+  # max: amount of items to process
+  def printProgress(val, max)
+      percentage = (val.to_f/max.to_f*100.0).to_i.to_s.rjust(3)
+      current = val.to_s.rjust(max.to_s.size)
+      print "\r#{percentage}% (#{current}/#{max})"
+      STDOUT.flush
+  end
+
+  # Create help text label
+  def createHelp
+    help = Gtk::Label.new(helpText)
+    help.set_wrap true
+    #help.set_selectable true
+    help.set_use_markup true
+    # kind of like vertical-align: top
+    vbox = Gtk::VBox.new false
+    vbox.pack_start help, false, false
+    vbox
+  end
+
+  # returns some helpful text
+  def helpText
+    help =  "<b>Kurzanleitung:</b>\n\n"
+    help << "Markiere TOPs so:\n"
+    help << "\t===\n"
+    help << "\tEin tolles TOP\n"
+    help << "\t===\n\n"
+    help << "Um Leute mit Arbeit zu beglücken:\n"
+    help << "\t${fsaccount}\n"
+    help << "\t${eine@email.adresse}\n"
+    help << "\t${eine@email.adresse Vorname Nachname}\n"
+    help << "\t${Vorname Nachname eine@email.adresse}\n\n"
+    help << "Schreibe das Protokoll\n"
+    help << "\tGanz normal speichern\n"
+    help << "\tEditor beenden\n\n"
+    help << "Mail-Magie dann hier"
+  end
+
+  # Prints a success message and colors the console 'good'
+  def printSuccess
+    colorGood
+    log "---"
+    log "Alles hat geklappt!"
+    log "Du bist ein Held."
+    log "---"
+    log "Du kannst das Programm jetzt schließen."
+  end
+
+  # colors the console 'good' (green if on Fachschaftsrechner, blue
+  # otherwise)
+  def colorGood
+    if $thisIsFachschaftsRechner
+      @cons.modify_text(Gtk::STATE_NORMAL, Gdk::Color.parse("white"))
+      @cons.modify_base(Gtk::STATE_NORMAL, Gdk::Color.parse("#00A12E"))
+    else
+      @cons.modify_text(Gtk::STATE_NORMAL, Gdk::Color.parse("white"))
+      @cons.modify_base(Gtk::STATE_NORMAL, Gdk::Color.parse("#444BC4"))
+    end
+  end
+
+  def colorBad
+    @cons.modify_text(Gtk::STATE_NORMAL, Gdk::Color.parse("white"))
+    @cons.modify_base(Gtk::STATE_NORMAL, Gdk::Color.parse("#B30010"))
+  end
+
+  # Create pseudo-console text box
+  def createConsole
+    @cons = Gtk::TextView.new
+    @cons.set_editable false
+    @cons.wrap_mode = Gtk::TextTag::WRAP_WORD
+    @cons.left_margin = 5
+    @cons.right_margin = 5
+    @cons.modify_font(Pango::FontDescription.new("Monospace 9"))
+
+    @scrl = Gtk::ScrolledWindow.new
+    @scrl.add(@cons)
+    @scrl.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_ALWAYS)
+
+    # auto scroll to bottom
+    @cons.signal_connect("size-allocate") do
+      @scrl.vadjustment.value = @scrl.vadjustment.upper - @scrl.vadjustment.page_size
+    end
+    @scrl
+  end
+
+  # Create the main window
+  def createWindow
+    t = ["That rug really tied the room together.", "Yeah, well, you know, that's just, like, your opinion, man."]
+    win = Gtk::Window.new
+
+    win.set_title "#{$appname}: #{t[rand(t.size)]}"
+
+    win.signal_connect "destroy" do Gtk.main_quit end
+        win.set_window_position Gtk::Window::POS_CENTER
+    win.border_width = 10
+    win
+  end
+
+  # creats a GTK message with a warning symbol and a "close" button.
+  def printWarning(msg)
+    dia = Gtk::MessageDialog.new(@win, Gtk::Dialog::DESTROY_WITH_PARENT, Gtk::MessageDialog::QUESTION, Gtk::MessageDialog::BUTTONS_CLOSE, msg)
+    res = dia.run
+    dia.destroy
+    res
+  end
+
+  # creates a listbox for fast-search
+  def createListbox
+    render = Gtk::CellRendererText.new
+    col1 = Gtk::TreeViewColumn.new("Benutzername", render, {'text' => 0})
+    col2 = Gtk::TreeViewColumn.new("Realname", render, {'text' => 1})
+    col1.sizing = Gtk::TreeViewColumn::AUTOSIZE
+    col2.sizing = Gtk::TreeViewColumn::AUTOSIZE
+
+    @list = Gtk::ListStore.new(String, String)
+
+    tree = Gtk::TreeView.new @list
+    tree.selection.mode = Gtk::SELECTION_SINGLE
+
+    tree.append_column(col1)
+    tree.append_column(col2)
+
+    # listen to double clicks and copy the selected coloumn
+    # to the input field
+    tree.signal_connect("row-activated") do |s, p, c|
+      @input.text = s.selection.selected[0]
+      searchAsYouType(@input.text)
+    end
+
+    scrl = Gtk::ScrolledWindow.new
+    scrl.add(tree)
+    scrl.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_ALWAYS)
+
+    return scrl
+  end
+
+  # creates an input box for user searching
+  def createInput(text)
+    return @input if @input && !@input.destroyed?
+
+    @input = Gtk::Entry.new
+    @input.activates_default = true
+    @input.text = text
+    @input.select_region(0, -1)
+    # Add signals on which to update search field
+    ["key-release-event", "activate", "cut-clipboard", "delete-from-cursor", "insert-at-cursor", "paste-clipboard"].each { |x| @input.signal_connect(x) { searchAsYouType(@input.text) } }
+
+    @input
+  end
+
+  def createWrongUserHelp(olduser)
+    t = "Unbekannter Nutzer: <b>#{olduser}</b>\n\n"
+    t << "Gib im Eingabefeld den richtigen <b>Benutzernamen</b> oder die E-Mail Adresse an. "
+    t << "Du kannst auch direkt mit dem Feld suchen, Ergebnisse werden in der Liste darunter angezeigt.\n\n"
+    t << "Die Änderung gilt für <i>alle</i> Vorkommnisse von „#{olduser}“.\n"
+
+    help = Gtk::Label.new(t)
+    help.set_wrap true
+    help.set_justify Gtk::JUSTIFY_FILL
+    help.set_use_markup true
+    help.set_size_request 430, -1
+
+    help
+  end
+
+  # create user-not-found dialog. Returns user's correction.
+  def createDialog(user)
+    @mailto = Gtk::Label.new
+    @mailto.set_use_markup true
+
+    createInput(user)
+
+    vbox = Gtk::VBox.new false
+    vbox.pack_start createWrongUserHelp(user), false, false
+    vbox.pack_start @input, false, false, 5
+    vbox.pack_start createListbox, true
+    vbox.pack_start @mailto, false, true, 5
+
+    searchAsYouType(user)
+
+    @diag = Gtk::Dialog.new("#{$appname}: F**k it, Dude, let's go bowling." , @win, Gtk::Dialog::MODAL, [Gtk::Stock::CANCEL, 0], [Gtk::Stock::APPLY, 1])
+    @diag.set_default_size(350, 500)
+    @diag.set_default_response(1)
+
+    @diag.vbox.add vbox
+    @diag.border_width = 5
+    @diag.show_all
+
+    result = user
+    @diag.run do |resp|
+      if resp == 0 || user == @input.text
+        log "Belasse #{user} unverändert"
+      else
+        log "Ersetze „#{user}“ mit „#{@input.text}“."
+        result = @input.text
+      end
+    end
+    @diag.destroy
+    "${" + result + "}"
+  end
+
+  # finds all matching users for the given search term and
+  # populates @list box
+  def searchAsYouType(search)
+    if search.nil? || search.empty?
+      rexp = Regexp.new(".*")
+    else
+      rexp = Regexp.new(search, Regexp::IGNORECASE)
+    end
+    @list.clear
+    getUsers.each do |u|
+      next unless u.join(" ").match rexp
+      x = @list.append
+      x.set_value(0, u[0])
+      x.set_value(1, u[1])
+    end
+
+    search.strip!
+    pre = "<b>Empfänger: </b>"
+    response = true
+    if search =~ /^[a-z0-9_-]+$/i
+      @mailto.markup = "#{pre}#{search}@mathphys.stura.uni-heidelberg.de"
+    elsif search =~ $regexpMailValid
+      @mailto.markup = pre + search
+    else
+      @mailto.markup = "<b>Kein gültiger Empfänger erkennbar!</b>"
+      response = false
+    end
+    # disable apply button if input invalid
+    @diag.set_response_sensitive(1, response) if @diag && !@diag.destroyed?
+  end
+
+  # Small helper function that avoids stalling the GUI when doing
+  # work intensive stuff on the main thread
+  def processEvents
+    while (Gtk.events_pending?)
+      Gtk.main_iteration
+    end
+  end
+end
+
+Gtk.init
+
+# http://ruby-gnome2.sourceforge.jp/hiki.cgi?tips_threads
+module Gtk
+  GTK_PENDING_BLOCKS = []
+  GTK_PENDING_BLOCKS_LOCK = Monitor.new
+
+  def Gtk.queue &block
+    if Thread.current == Thread.main
+      block.call
+    else
+      GTK_PENDING_BLOCKS_LOCK.synchronize do
+        GTK_PENDING_BLOCKS << block
+      end
+    end
+  end
+
+  def Gtk.main_with_queue timeout
+    Gtk.timeout_add timeout do
+      GTK_PENDING_BLOCKS_LOCK.synchronize do
+        for block in GTK_PENDING_BLOCKS
+          block.call
+        end
+        GTK_PENDING_BLOCKS.clear
+      end
+      true
+    end
+    Gtk.main
+  end
+end
+
+
+########################################################################
+
+class DUDE < UTILS
+  # returns user entry for given any-case input. Returns
+  # nil if given username could not be found.
+  def findUser name
+    name = name.downcase
+    getUsers.each { |u| return u if u[0].downcase == name }
+    nil
+  end
+
+  def getRealname data
+    mail = data.match($regexpExtractMail)
+    if mail
+      # see if a name is given, otherwise fall back to capitalized
+      # mail prefix
+      x = data.gsub(mail.to_s, "").strip
+      x.empty? ? mail.to_s.gsub(/@.*$/, '').capitalize : x
+    elsif findUser(data)
+      findUser(data)[1]
+    else
+      data.capitalize
+    end
+  end
+
+  def getMail data
+    mail = data.match($regexpExtractMail)
+    mail ? mail : data
+  end
+
+  def initialize
+    @cdir = File.dirname(__FILE__)
+
+    $repo = findRepo
+    $gui = GUI.new
+
+    log("Debugging aktiv") if $debug
+
+    runMain
+  end
+
+  # check if the 'mails have been sent' line is present in that file
+  def checkMailsWereSent(filename)
+    @mailsWereSent = false
+    return unless File.exist?(filename)
+
+    lines = `less #{filename}`.split("\n")
+    lines.each do |l|
+      next if l.strip.empty?
+      break unless l.strip =~ /^#{$mailsSentLine}/
+      @mailsWereSent = true
+      break
+    end
+
+    log "Die E-Mails wurden bereits verschickt. Sie werden nicht erneut geschickt." if @mailsWereSent
+    log "E-Mails wurden noch nicht verschickt." unless @mailsWereSent
+  end
+
+  # execute all necessary actions to setup and store the protocol
+  def runMain
+    return unless $repo.update
+
+
+    if ARGV[0].nil? || ARGV[0].empty?
+      # create new file mode
+      t = Date.today.strftime("%Y-%m-%d.txt")
+      date = Date.today.strftime("%d.%m.%Y")
+      @viaCommandline = false
+      log "Verwende aktuelles Datum #{date}" if $debug
+    else
+      # file (supposedly) exists mode
+      unless File.exist?(ARGV[0])
+        log "Konnte die Datei '#{ARGV[0]}' nicht finden. Abbruch."
+        $gui.colorBad
+        return
+      end
+
+      # extract date
+      begin
+        x = Date.parse(File.basename(ARGV[0], "txt"))
+        t = x.strftime("%Y-%m-%d.txt")
+        date = x.strftime("%d.%m.%Y")
+        log "Datum der Datei: #{date}"
+      rescue
+        log "Konnte kein Datum aus dem Dateinamen '#{ARGV[0]}' holen. Abbruch."
+        $gui.colorBad
+        return
+      end
+
+      @viaCommandline = true
+
+      log "Verwende mitgegebenes Datum #{date}" if $debug
+    end
+
+    #~ log "Pfad ist:"
+    #~ log "\t #{Dir.pwd}/#{t}"
+    unless exe("touch '#{t}'", $debug) == 0
+      puts "Konnte die Protokolldatei für heute nicht anlegen."
+      $gui.colorBad
+      return
+    end
+
+    # Find users in BG
+    fingerUsers
+
+    log("Alles hat geklappt. Starte Editor.")
+    unless @viaCommandline
+      beginning = Time.now
+      exe("gedit --encoding utf-8 '#{t}'", $debug)
+      diff = Time.now - beginning
+      # protocol has been opened less than 5 minutes
+      if diff < 60*5
+        $gui.printWarning("############################################################\nProtocoldude -- GENAU LESEN\n############################################################\n\nDu hattest den Editor weniger als 5 Minuten offen.\n\nDas kann mehrere Ursachen haben:\n1: Der Editor war schon offen. Suche nach \"gedit\" und dort nach der Datei \"#{t}\".\n2: Du hast den Editor aus Versehen geschlossen. Öffne die Datei dann nochmal.\n  (Pfad ist: #{Dir.pwd}/#{t})\n\nWenn das Protokoll wirklich fertig bist, klicke auf schließen.")
+      end
+    end
+
+    checkMailsWereSent(t)
+
+    log("Starte Magie™")
+    lines = `less #{t}`.split("\n")
+    # enumerate nicely
+    lines, tops = fixTops(lines)
+    # correct unknown usernames
+    lines = checkAccounts(lines) if $thisIsFachschaftsRechner
+    # spam them!
+    spam(lines, tops, date, t) if $thisIsFachschaftsRechner && !@mailsWereSent
+    # save corrected protocol
+    File.open(t, 'w') {|f| f.write(lines.join("\n")) }
+    # commit!
+    unless $repo.commit(t, "Protokoll vom #{Date.today.strftime("%d.%m.%Y")}. Dies ist ein automatischer Checkin.") == 0
+      puts "Konnte Protokolldatei nicht commiten."
+      return
+    end
+
+    # warn about non-fs-rechner
+    unless $thisIsFachschaftsRechner
+      log '='*25
+      log 'Dies ist nicht der Fachschaftsrechner. Es wurden keine Mails verschickt und die E-Mail Adressen nicht korrigiert.'
+      log "Wenn Du das später nachholen willst, sorge dafür, dass die Änderungen in diesem Archiv an den Fachschaftsrechner geschickt werden und führe dort dann ein \"./protocoldude '#{t}'\" aus, dann werden die Mails verschickt."
+    end
+
+    $gui.printSuccess
+  end
+
+  # finds users/mail adresses and sends them the entire TOP
+  def spam(lines, tops, date, file)
+    log '---'
+    log 'Spamme User...'
+    url = $repo.getURL
+
+    tops << lines.size-1
+    #~ lines << ""
+    (0..tops.size-2).each do |i|
+      # extract topic data
+      dat = lines[tops[i]..tops[i+1]].join("\n").gsub("$", "\\$")
+      title = lines[tops[i]+1].gsub($regexpRemoveTOP, "").strip
+
+      accs = dat.scan($regexpAccount)
+      accs += dat.scan($regexpExternAll)
+
+      unless accs.nil? || accs.empty?
+        accs.each do |c|
+          mail = getMail(c[0])
+          name = getRealname(c[0])
+          log "Maile TOP #{i+1} an #{name} (#{mail})"
+
+          exe("echo -e \"Hallo #{name},\n\nDu sollst über irgendwas informiert werden. Im Sitzungsprotokoll steht dazu folgendes:\n\n#{dat}\n\n\n\nViele Grüße, Dein SPAM-Skript.\n\nSollte der Text abgeschnitten sein, schaue bitte im Sitzungsprotokoll nach (Zeile #{tops[i]} – MathPhys Login notwendig).\n#{url}/#{file}\" | mail -a \"Reply-To: #{$replyto}\" -a \"Content-Type: text/plain; charset=UTF-8\" -s \"#{$subject}: #{title} (#{date})\" '#{mail}';", false) unless $debug
+        end
+      end
+    end
+
+    $mailall.each do |x|
+      mail = getMail(x)
+      name = getRealname(x)
+      dat = lines.join("\n").gsub("$", "\\$")
+      log("Maile ALLES an #{name} (#{mail})")
+      exe("echo -e \"Hallo #{name},\n\nes gab mal wieder eine Sitzung. Hier das gesamte Protokoll:\n\n#{dat}\n\n\n\nViele Grüße, Dein SPAM-Skript.\n\n\n#{url}/#{file}\" | mail -a \"Reply-To: #{$replyto}\" -a \"Content-Type: text/plain; charset=UTF-8\" -s \"#{$subject}: ganzes Protokoll (#{date})\" '#{mail}';", false) unless $debug
+    end
+
+    lines.unshift("")
+    lines.unshift("")
+    lines.unshift($mailsSentLine + Time.now.strftime("%T Uhr, %d.%m.%Y"))
+  end
+
+  # checks if the referenced accounts exist. For non-matches a
+  # search dialog is presented.
+  def checkAccounts lines
+    d = lines.join("\n")
+    # will save once corrected values
+    h = Hash.new
+
+    d = d.gsub($regexpAccount) do |s|
+      # check if username is already known to exist
+      if findUser $1
+        s
+      # or if it has been corrected before
+      elsif !h[$1].nil?
+        # and silently fix again
+        h[$1]
+      # otherwise just query user
+      else
+        log "----"
+        log "Unbekannter Nutzer: #{$1}"
+        newuser = $gui.createDialog($1)
+        # save corrected result in case it reappears later
+        h[$1] = newuser
+        newuser
+      end
+    end
+    d.split("\n")
+  end
+
+  # automatically enumerates TOPs and pre- and postpends them with
+  # equal signs
+  def fixTops lines
+    log "---"
+    log "Gefundene TOPs:"
+    tops = []
+    count = 1
+    i = -1
+    while i < lines.length
+      i += 1
+      next unless lines[i] =~ /^===/
+      next unless lines[i+2] =~ /^===/
+
+      # apparently a TOP has been found
+      tops << i # store line of top
+
+      # find actual TOP title and adjust numbering
+      # and surrounding equal signs
+      top = lines[i+1].gsub($regexpRemoveTOP, "").strip
+      lines[i+1] = "TOP #{count}: #{top}"
+      lines[i]   = "=" * lines[i+1].length
+      lines[i+2] = "=" * lines[i+1].length
+
+      count += 1
+      i += 2
+    end
+
+    #top.each_with_index { |t,i| log "#{i+1}: #{t}" } unless top.nil?
+
+    return lines, tops
+  end
+end
+
+DUDE.new
+Gtk.main_with_queue 50
