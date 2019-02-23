@@ -17,44 +17,75 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import getpass
 
-def get_tops(protocol):
-    top_number = 1
-    tops = [[],[],[]]  # number, start_line, end_line
-    for i in range(len(protocol)-2):
-        # check for TOP title
-        if protocol[i].startswith("===") and protocol[i+2].startswith("==="):
-            tops[0].append(top_number)
-            tops[1].append(i)
-            # adjust TOP type setting
-            if not protocol[i+1].startswith("TOP: "): protocol[i+1] = "TOP " + str(top_number) + ": " + protocol[i+1]
-            else: protocol[i+1] = "TOP " + top_number + ": " + protocol[i+1,5:]
-            length = len(protocol[i+1])
-            protocol[i+2] = "="*length
-            protocol[i] = "="*length
-            top_number +=1
+def check_path(path: str) -> bool:
+    year = path[0:4].isnumeric()
+    month = path[5:6].isnumeric()
+    date = path[7:8].isnumeric()
+    name = year and month and data and path[4] is '-' and path[6] is '-'
 
-    for i in range(len(tops[0])-1):
-        print(i)
-        print(tops[1][i+1]-1)
-        tops[2].append(tops[1][i+1]-1)
-    tops[2].append(len(protocol)-1)
+    if path.endswith('.txt') and name:
+        return True
+    else:
+        raise Exception('Der Dateipfad führt nicht zu einem Sitzungsprotokoll!')
+        return False
 
-    return tops
+class Protocol(object):
+    """reads in the protocol and processes it"""
+    def __init__(self, path):
+        # validate filename as protocol (yyyy-mm-dd) and .txt
+        self.path = path
 
-def get_user(protocol: list, tops: list) -> list:
-    users = [[],[],[]] # user, mail, top
-    print(users)
-    for i in range(len(protocol)):
-        # check for mail address
-        if "${" in protocol[i]:
-            start = protocol[i].index("${")
-            end = protocol[i].index("}")
-            user = protocol[i][start+2:end]
-            j = len(tops[0])-1
-            while tops[1][j] > i: j-=1
-            users[0].append(user)
-            users[2].append(j+1)
-    return users
+        print('\nProtokoll "{}" wird bearbeitet .. \n \n'.format(self.path))
+
+        with open(self.path, 'r') as file:
+            self.protocol = file.read().splitlines()
+        self.tops = []
+
+    def get_tops(self):
+        """separate the given protocol in several TOPs from '===' to '==='"""
+        for i, line in enumerate(self.protocol):
+            # check for TOP title
+            if line.startswith("===") and self.protocol[i+2].startswith("==="):
+                print(str(i) + line)
+                ende = self.protocol[i+3:].index("===")+i+2 if (line in self.protocol[i+3:]) else len(self.protocol)-1
+                top = TOP(len(self.tops)+1, i, ende)
+                self.tops.append(top)
+        print(len(self.tops))
+
+    def rename_title(self):
+        """Adjust TOP title type setting"""
+        for top in self.tops:
+            if not self.protocol[top.start+1].startswith("TOP: "): self.protocol[top.start+1] = "TOP " + str(top.number) + ": " + self.protocol[top.start+1]
+            else: self.protocol[top.start+1] = "TOP " + top.number + ": " + self.protocol[top.start+1,5:]
+            length = len(self.protocol[top.start+1])
+            self.protocol[top.start+2] = "="*length
+            self.protocol[top.start] = "="*length
+
+
+class TOP(Protocol): # inherit from "object"
+    """Separates the several TOPs out of one protocol and provides different functions to further process the sections"""
+
+    def __init__(self, number: int, start: int, ende: int):
+        self.number = number
+        self.start = start
+        self.ende = ende # only at first because of of missing information
+
+    def get_user(protocol: list):
+        for line in protocol[start:end]:
+            # check for mail address
+            if "${" in protocol[i]:
+                start = protocol[i].index("${")
+                end = protocol[i].index("}")
+                user = protocol[i][start+2:end]
+                j = len(tops[0])-1
+                while tops[1][j] > i: j-=1
+                users[0].append(user)
+                users[2].append(j+1)
+        return users
+
+    def rewrite_title(self):
+        print("")
+
 
 def ldap_search(users: list) -> list:
     """ searches for a list of users in our ldap """
@@ -147,17 +178,6 @@ def send_mail(login, password):
     text = msg.as_string()
     server.sendmail(fromaddr, toaddr, text)
 
-def check_path(filename):
-    year = filename[0:4].isnumeric()
-    month = filename[5:6].isnumeric()
-    date = filename[7:8].isnumeric()
-    name = year and month and data and filename[4] is '-' and filename[6] is '-'
-
-    if filename.endswith('.txt') and name:
-        return True
-    else:
-        raise Exception('Der Dateipfad führt nicht zu einem Sitzungsprotokoll!')
-        return False
 
 def write_success(protocol):
     protocol = ":Protocoldude: Mails versandt @ 16:39:57 Uhr, 19.01.2018\n\n" + protocol
@@ -170,13 +190,13 @@ def write_success(protocol):
 
 if __name__ == "__main__":
 
-    MATHPHYS_LDAP_ADDRESS = "ldap1.mathphys.stura.uni-heidelberg.de"
-    MATHPHYS_LDAP_BASE_DN = "ou=People,dc=mathphys,dc=stura,dc=uni-heidelberg,dc=de"
-
-    login = getpass.getuser()
-    password = getpass.getpass(prompt='Passwort für deinen Mail-Account: ')
-    print(login)
-    print(password)
+    # MATHPHYS_LDAP_ADDRESS = "ldap1.mathphys.stura.uni-heidelberg.de"
+    # MATHPHYS_LDAP_BASE_DN = "ou=People,dc=mathphys,dc=stura,dc=uni-heidelberg,dc=de"
+    #
+    # login = getpass.getuser()
+    # password = getpass.getpass(prompt='Passwort für deinen Mail-Account: ')
+    # print(login)
+    # print(password)
 
     # disables error messages
     sys.tracebacklimit = 0
@@ -185,22 +205,25 @@ if __name__ == "__main__":
     parser.add_argument("infile", metavar="[path/to/file]", type=argparse.FileType('r'))
     args = parser.parse_args()
 
-    # validate filename as protocol (yyyy-mm-dd) and .txt
-    print('\nProtokoll "{}" wird bearbeitet .. \n \n'.format(args.infile.name))
+    protocol = Protocol(path=args.infile.name)
+    protocol.get_tops()
+    for top in protocol.tops:
+        print("Start: {}".format(top.start))
+        print("Ende: {}".format(top.ende))
 
-    with open(args.infile.name, 'r') as file:
-        protocol = file.read().splitlines()
-
-    tops = get_tops(protocol)
-    print(tops)
-    users = get_user(protocol, tops)
-    print(users)
+    protocol.rename_title()
+    print('\n'.join(protocol.protocol) + '\n')
+    
+    # tops = get_tops(protocol)
+    # print(tops)
+    # users = get_user(protocol, tops)
+    # print(users)
 
     # users_result = ldap_search(users)
-    mails = extract_mails(ldap_search(users[0])) + list_mails(users[0])
-    for user in users[0]:
-        for mail in mails:
-        if (user in mail.split('@'))
+    # mails = extract_mails(ldap_search(users[0])) + list_mails(users[0])
+    # for user in users[0]:
+    #     for mail in mails:
+    #     if (user in mail.split('@'))
 
     # print(mails)
 
