@@ -1,13 +1,7 @@
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-
 import getpass
-
-login = getpass.getuser()
-password = getpass.getpass(prompt='Password for Mail: ')
-print(login)
-print(password)
 
 def send_mail(login, password):
     server = smtplib.SMTP("mail.urz.uni-heidelberg.de", 587)
@@ -27,3 +21,7 @@ def send_mail(login, password):
 
     text = msg.as_string()
     server.sendmail(fromaddr, toaddr, text)
+
+login = "pb438"
+password = getpass.getpass(prompt='Password for Mail: ')
+send_mail(login, password)

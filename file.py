@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # possible input mail adresses:
@@ -18,12 +18,13 @@ from email.mime.text import MIMEText
 import getpass
 
 def check_path(path: str) -> bool:
+    """checks the input file name for a valid date and type .txt"""
     year = path[0:4].isnumeric()
-    month = path[5:6].isnumeric()
-    date = path[7:8].isnumeric()
-    name = year and month and data and path[4] is '-' and path[6] is '-'
+    month = path[5:7].isnumeric()
+    date = path[8:9].isnumeric()
+    name = year and month and date and path[4] is '-' and path[7] is '-'
 
-    if path.endswith('.txt') and name:
+    if '.txt' in path and name:
         return True
     else:
         raise Exception('Der Dateipfad führt nicht zu einem Sitzungsprotokoll!')
@@ -40,17 +41,16 @@ class Protocol(object):
         with open(self.path, 'r') as file:
             self.protocol = file.read().splitlines()
         self.tops = []
+        self.mails = False
 
     def get_tops(self):
         """separate the given protocol in several TOPs from '===' to '==='"""
         for i, line in enumerate(self.protocol):
             # check for TOP title
             if line.startswith("===") and self.protocol[i+2].startswith("==="):
-                print(str(i) + line)
-                ende = self.protocol[i+3:].index("===")+i+2 if (line in self.protocol[i+3:]) else len(self.protocol)-1
-                top = TOP(len(self.tops)+1, i, ende)
+                end = self.protocol[i+3:].index("===")+i+2 if (line in self.protocol[i+3:]) else len(self.protocol)-1
+                top = TOP(len(self.tops)+1, i, end)
                 self.tops.append(top)
-        print(len(self.tops))
 
     def rename_title(self):
         """Adjust TOP title type setting"""
@@ -61,31 +61,92 @@ class Protocol(object):
             self.protocol[top.start+2] = "="*length
             self.protocol[top.start] = "="*length
 
+    def get_users(self):
+        for top in self.tops:
+            top.get_user(self.protocol)
+            top.get_mails()
+
+    def send_mails(self):
+        try:
+            server = smtplib.SMTP("mail.urz.uni-heidelberg.de", 587)
+            login = input('URZ ID für den Mailversand: ')
+            server.login(login, getpass.getpass(prompt='Passwort für deinen Mail-Account: '))
+            fromaddr = getpass.getuser()
+            for top in self.tops:
+                top.send_mail(server, self.protocol)
+            server.quit()
+            self.mails = True
+            print("Alle Mails wurden erfolgreich verschickt. \n")
+        except:
+            print("Mails konnten nicht verschickt werden. Hast du die richtigen Anmeldedaten eingegeben?")
+            pass
+
+    def write_success(self):
+        if self.mails:
+            self.protocol.insert(0, ":Protocoldude: Mails versandt @ 16:39:57 Uhr, 19.01.2018")
+            self.protocol.insert(1, "\n")
+
+        with open(self.path, 'w') as file:
+            file.write('\n'.join(self.protocol) + '\n')
+        subprocess.call(['svn add', '{}'.format(self.path)])
+        subprocess.call(['svn commit', '-m', '"Protokoll der gemeinsamen Sitzung hinzugefügt"')
+        print("Protokoll bearbeitet und in den Sumpf geschrieben.")
+
 
 class TOP(Protocol): # inherit from "object"
     """Separates the several TOPs out of one protocol and provides different functions to further process the sections"""
 
-    def __init__(self, number: int, start: int, ende: int):
+    def __init__(self, number: int, start: int, end: int):
         self.number = number
         self.start = start
-        self.ende = ende # only at first because of of missing information
+        self.end = end # only at first because of of missing information
+        self.users = []
+        self.mails = []
 
-    def get_user(protocol: list):
-        for line in protocol[start:end]:
+    def get_user(self, protocol: list):
+        """searches for all mentioned users in the TOP paragraph"""
+# TODO: recognize multiple users in one line
+        for line in protocol[self.start:self.end]:
             # check for mail address
-            if "${" in protocol[i]:
-                start = protocol[i].index("${")
-                end = protocol[i].index("}")
-                user = protocol[i][start+2:end]
-                j = len(tops[0])-1
-                while tops[1][j] > i: j-=1
-                users[0].append(user)
-                users[2].append(j+1)
-        return users
+            if "${" in line and "}" in line:
+                start = line.index("${")
+                end = line.index("}")
+                user = line[start+2:end]
+                self.users.append(user)
 
-    def rewrite_title(self):
-        print("")
+        self.users = list(set(self.users)) # remove duplicates
 
+    def get_mails(self):
+        # print(self.users)
+        # print(extract_mails(ldap_search(self.users)))
+        # print(list_mails(self.users))
+        if extract_mails(ldap_search(self.users)) is not None:
+            self.mails = extract_mails(ldap_search(self.users))
+            if list_mails(self.users):
+                self.mails.append(list_mails(self.users))
+
+        if list_mails(self.users):
+            self.mails = list_mails(self.users)
+
+        # for user in users[0]:
+        #     for mail in mails:
+        #     if (user in mail.split('@'))
+    def send_mail(self, server, protocol):
+        for user,mail in zip(self.users,self.mails):
+            fromaddr = user
+
+            msg = MIMEMultipart()
+            msg['From'] = fromaddr
+            msg['To'] = mail
+            msg['Subject'] = "Gemeinsame Sitzung: {}".format(protocol[self.start+1])
+
+            body = "Hallo {},\n\nDu sollst über irgendwas informiert werden. Im Sitzungsprotokoll steht dazu folgendes:\n\n{}\n\n\nViele Grüße, Dein SPAM-Skript.".format(user, '\n'.join(protocol[self.start:self.end])+'\n')
+            # \n\nSollte der Text abgeschnitten sein, schaue bitte im Sitzungsprotokoll nach (Zeile #{tops[i]} – MathPhys Login notwendig).\n#{url}/#{file}\" | mail -a \"Reply-To: #{$replyto}\" -a \"Content-Type: text/plain; charset=UTF-8\" -s \"#{$subject}: #{title} (#{date})\" '#{mail}';", false) unless $debug
+            # body = '\n'.join(body) + '\n'
+            msg.attach(MIMEText(body, 'plain'))
+
+            text = msg.as_string()
+            server.sendmail(fromaddr, toaddr, text)
 
 def ldap_search(users: list) -> list:
     """ searches for a list of users in our ldap """
@@ -109,7 +170,7 @@ def extract_mails(query: list) -> list:
             mails.append(attributes["mail"][0].decode('utf-8'))
         return mails
 
-def list_mails(names: list) -> int:
+def list_mails(names: list) -> list:
     # define common mail lists
     users = np.array(["fachschaft", "liebe Fachschaft"])
     users = np.vstack([users, ["flachschaft", "liebe Fachschaft"]])
@@ -158,41 +219,11 @@ def list_mails(names: list) -> int:
 #    return user
 
 
-
-def send_mail(login, password):
-    server = smtplib.SMTP("mail.urz.uni-heidelberg.de", 587)
-
-    #Next, log in to the server
-    server.login(login, password)
-
-    fromaddr = "chrisb@mathphys.stura.uni-heidelberg.de"
-    toaddr = "chris-blattgerste@gmx.de"
-
-    msg = MIMEMultipart()
-    msg['From'] = fromaddr
-    msg['To'] = toaddr
-    msg['Subject'] = "Python test email"
-    body = "Python test mail"
-    msg.attach(MIMEText(body, 'plain'))
-
-    text = msg.as_string()
-    server.sendmail(fromaddr, toaddr, text)
-
-
-def write_success(protocol):
-    protocol = ":Protocoldude: Mails versandt @ 16:39:57 Uhr, 19.01.2018\n\n" + protocol
-
-    with open("protokoll_neu.txt","w") as f:
-        f.write(protocol)
-
-    return protocol
-
-
 if __name__ == "__main__":
 
-    # MATHPHYS_LDAP_ADDRESS = "ldap1.mathphys.stura.uni-heidelberg.de"
-    # MATHPHYS_LDAP_BASE_DN = "ou=People,dc=mathphys,dc=stura,dc=uni-heidelberg,dc=de"
-    #
+    MATHPHYS_LDAP_ADDRESS = "ldap1.mathphys.stura.uni-heidelberg.de"
+    MATHPHYS_LDAP_BASE_DN = "ou=People,dc=mathphys,dc=stura,dc=uni-heidelberg,dc=de"
+
     # login = getpass.getuser()
     # password = getpass.getpass(prompt='Passwort für deinen Mail-Account: ')
     # print(login)
@@ -205,28 +236,19 @@ if __name__ == "__main__":
     parser.add_argument("infile", metavar="[path/to/file]", type=argparse.FileType('r'))
     args = parser.parse_args()
 
+    check_path(path=args.infile.name)
     protocol = Protocol(path=args.infile.name)
     protocol.get_tops()
+    protocol.get_users()
     for top in protocol.tops:
         print("Start: {}".format(top.start))
-        print("Ende: {}".format(top.ende))
+        print(top.users)
+        print(top.mails)
+        print("Ende: {}".format(top.end))
 
     protocol.rename_title()
-    print('\n'.join(protocol.protocol) + '\n')
-    
-    # tops = get_tops(protocol)
-    # print(tops)
-    # users = get_user(protocol, tops)
-    # print(users)
+    # protocol.send_mails()
+    protocol.write_success()
 
-    # users_result = ldap_search(users)
-    # mails = extract_mails(ldap_search(users[0])) + list_mails(users[0])
-    # for user in users[0]:
-    #     for mail in mails:
-    #     if (user in mail.split('@'))
 
     # print(mails)
-
-    write_success(protocol)
-    with open('protocol_neu.txt', 'w') as file:
-        file.write('\n'.join(protocol) + '\n')
